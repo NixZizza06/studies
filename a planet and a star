@@ -10,6 +10,7 @@ per \rho => \frac{d}{dt}(m\dot{\rho}) - mr\dot{\theta}^2 + \frac{GMm}{\rho^2} = 
 ​per \theta => \frac{d]{dt}*(m\rho^2\dot{theta}) = 0 =>  \rho^2\dot{\theta} = cost = h
 
 Da questo tiriamo fuori il programma:
+
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
@@ -67,3 +68,31 @@ plt.axis('equal')
 plt.grid(True)
 plt.legend()
 plt.show()
+
+
+#riflessioni: scipy.integrate è un sistema python che implementa IVP (initial value problem), di base permette di risolvere equazioni differenziali ordinarie.
+Oltre a solve_ivp, il modulo offre:
+          -quad – integrazione di una funzione in una variabile (ad esempio per calcolare aree).
+          -dblquad, tplquad – integrali doppi e tripli.
+          -odeint – un integratore più vecchio (ora si preferisce solve_ivp)
+dice dove si trova un corpo dopo del tempo dato, quindi ad esempio ci dirà il pianeta dove si trova.
+
+Va implementato un Input per la massa
+def chiedi_massa(messaggio, default):
+    """
+    Richiede all'utente di inserire un valore numerico positivo.
+    Se l'input è vuoto o non valido, restituisce il default.
+    """
+    while True:
+        inp = input(messaggio).strip()
+        if inp == "":
+            print(f"  → Usato valore predefinito: {default}")
+            return default
+        try:
+            valore = float(inp)
+            if valore <= 0:
+                print("  Errore: la massa deve essere positiva. Riprova.")
+                continue
+            return valore
+        except ValueError:
+            print("  Errore: inserire un numero valido (es. 1.0 o 0.5).")

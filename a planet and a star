@@ -11,6 +11,7 @@ per \rho => \frac{d}{dt}(m\dot{\rho}) - mr\dot{\theta}^2 + \frac{GMm}{\rho^2} = 
 
 Da questo tiriamo fuori il programma:
 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
@@ -106,7 +107,7 @@ plt.grid(True, alpha=0.3)
 plt.legend()
 plt.tight_layout()
 plt.show()
-
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
 #riflessioni: scipy.integrate è un sistema python che implementa IVP (initial value problem), di base permette di risolvere equazioni differenziali ordinarie.
 Oltre a solve_ivp, il modulo offre:
           -quad – integrazione di una funzione in una variabile (ad esempio per calcolare aree).

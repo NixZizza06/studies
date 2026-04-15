@@ -1,0 +1,69 @@
+Proverò a creare un piccolo programma in cui un pianeta ruota attorno a una stella, e potremo inserire le informazioni necessarie.
+In questa prima fase, decideremo quali saranno le caratteristiche del nostro programma: abbiamo un elemento come una stella con una massa M.
+Il pianeta, nelle nostre condizioni, avrà una massa m.
+Definiamo le coordianate polari del sistema useremo dunque (\rho , \theta) nel piano. Con questi dati, generalizzando la posizione del pianeta sarà:
+          x = \rho cos(\theta)  |  y = \rho sin(\theta) 
+Sulla base di nozioni di meccanica classica = $T= (1/2)m((\dot{\rho})^2+(\rho*\dot{\theta})^2)$ , $V= -\frac{GMm}{r}$
+La Lagrangiana= L(\rho;\theta;\dot{\rho};\dot{\theta})= T - V
+Da cui Eulero-Lagrange dice che (meccanica analitica): \frac{d}{dt}*(\frac{\de{L}}{\de{\dot{q_i}}} - \frac{\de{L}}{\de{q_i}} = 0
+per \rho => \frac{d}{dt}(m\dot{\rho}) - mr\dot{\theta}^2 + \frac{GMm}{\rho^2} = 0
+​per \theta => \frac{d]{dt}*(m\rho^2\dot{theta}) = 0 =>  \rho^2\dot{\theta} = cost = h
+
+Da questo tiriamo fuori il programma:
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# Costanti (in unità astronomiche, masse solari e giorni)
+G = 6.67430e-11          # m^3 kg^-1 s^-2
+AU = 1.495978707e11      # metro
+M_sun = 1.98847e30       # kg
+day = 86400              # secondi
+
+# Convertiamo G in unità AU, M_sun, day
+G = G * (day**2) * M_sun / (AU**3)   # ≈ 2.959122082855911e-04
+
+# Parametri del sistema
+M_star = 1.0              # massa stella in masse solari
+GM = G * M_star
+
+# Condizioni iniziali: orbita ellittica (es. Terra attorno al Sole)
+r0 = 1.0                  # AU
+dr0 = 0.0                 # velocità radiale iniziale (AU/day)
+theta0 = 0.0              # angolo iniziale
+dtheta0 = np.sqrt(GM / r0**3) * 1.0  # per orbita circolare; moltiplica per <1 per ellisse
+
+# Tempo di integrazione: 3 anni in giorni
+t_span = (0, 3*365.25)
+t_eval = np.linspace(*t_span, 1000)
+
+# Sistema di equazioni differenziali
+def equazioni(t, y):
+    r, dr, theta, dtheta = y
+    ddtheta = -2 * dr * dtheta / r if r > 1e-10 else 0.0
+    ddr = r * dtheta**2 - GM / r**2
+    return [dr, ddr, dtheta, ddtheta]
+
+# Stato iniziale
+y0 = [r0, dr0, theta0, dtheta0]
+
+# Integrazione
+sol = solve_ivp(equazioni, t_span, y0, t_eval=t_eval, method='DOP853', rtol=1e-10, atol=1e-10)
+
+# Estrazione soluzioni
+r = sol.y[0]
+theta = sol.y[2]
+x = r * np.cos(theta)
+y = r * np.sin(theta)
+
+# Plot dell'orbita
+plt.figure(figsize=(6,6))
+plt.plot(x, y, label='Orbita del pianeta')
+plt.scatter([0], [0], color='orange', s=100, label='Stella')
+plt.xlabel('x [AU]')
+plt.ylabel('y [AU]')
+plt.title('Moto planetario via meccanica Lagrangiana')
+plt.axis('equal')
+plt.grid(True)
+plt.legend()
+plt.show()

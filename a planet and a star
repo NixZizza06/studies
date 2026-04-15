@@ -15,60 +15,97 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
-# Costanti (in unità astronomiche, masse solari e giorni)
-G = 6.67430e-11          # m^3 kg^-1 s^-2
-AU = 1.495978707e11      # metro
-M_sun = 1.98847e30       # kg
-day = 86400              # secondi
+#------------------------------
+# Costanti fisiche (in unità astronomiche, masse solari e giorni)
+#------------------------------
+G = 6.67430e-11         # m^3 kg^-1 s^-2
+AU = 1.495978707e11     # metro
+M_sun = 1.98847e30      # kg
+day = 86400             # secondi
 
-# Convertiamo G in unità AU, M_sun, day
-G = G * (day**2) * M_sun / (AU**3)   # ≈ 2.959122082855911e-04
+# Converti G in unità AU, M_sun, day 
+G_au = G * (day**2) * M_sun / (AU**3)
 
-# Parametri del sistema
-M_star = 1.0              # massa stella in masse solari
-GM = G * M_star
+#Funzione di input per la massa del sole e del pianeta
+def chiedi_massa(messaggio, default):
+    """
+    L'utente può inserire un valore numerico positivo.
+    Se l'input è vuoto o non valido, verrà utilizzato il valore di default del Sole e della Terra.
+    """
+    while True:
+        inp = input(messaggio).strip() #rimuove gli spazi bianchi
+        if inp == "":
+            print(f" -> Usato valore predefinito: {default}")
+            return default  
+        try: 
+            valore = float(inp)
+            if valore <= 0:
+                print("Errore: la massa deve essere positiva. Riprova")
+                continue
+            return valore
+        except ValueError:
+            print("Errore: inserire un numero valido (es 1.0 o 0.5).")
 
-# Condizioni iniziali: orbita ellittica (es. Terra attorno al Sole)
-r0 = 1.0                  # AU
-dr0 = 0.0                 # velocità radiale iniziale (AU/day)
-theta0 = 0.0              # angolo iniziale
-dtheta0 = np.sqrt(GM / r0**3) * 1.0  # per orbita circolare; moltiplica per <1 per ellisse
+M_star = chiedi_massa("massa della stella, default = 1.0 per il Sole: ", default=1.0)
+M_planet = chiedi_massa("massa del pianeta, default = 3e-6 per la Terra: ",default=3.0e-6)
 
-# Tempo di integrazione: 3 anni in giorni
-t_span = (0, 3*365.25)
-t_eval = np.linspace(*t_span, 1000)
+print(f"\nParametri impostati:")
+print(f" Stella: {M_star:.6f} M☉")
+print(f" Pianeta: {M_planet:.6e} M☉")
+print(f" GM = {G_au * M_star:.6f} AU³/giorno²\n")
 
-# Sistema di equazioni differenziali
-def equazioni(t, y):
+# ---------------------------
+# Condizioni iniziali (personalizzabili)
+# ---------------------------
+
+r0 = float(input("scegli un valore di raggio"))                # AU
+dr0 = float(input("scegli un valore di velocità radiale"))     # velocità radiale
+theta0 = float(input("scegli un valore di angolo"))            # angolo iniziale
+# Velocità angolare per orbita quasi circolare (eccentricità 0)
+dtheta0 = np.sqrt(G_au * M_star / r0**3) * 0.9  # 0.9 per orbita ellittica
+
+def equazioni(t,y):
     r, dr, theta, dtheta = y
-    ddtheta = -2 * dr * dtheta / r if r > 1e-10 else 0.0
-    ddr = r * dtheta**2 - GM / r**2
+    # Bisogna evitare la divisione per 0
+    if r < 1e-12:
+        r = 1e-12
+    ddtheta = -2 * dr * dtheta / r
+    ddr = r * dtheta**2 - (G_au * M_star) / r**2
     return [dr, ddr, dtheta, ddtheta]
 
-# Stato iniziale
-y0 = [r0, dr0, theta0, dtheta0]
 
-# Integrazione
-sol = solve_ivp(equazioni, t_span, y0, t_eval=t_eval, method='DOP853', rtol=1e-10, atol=1e-10)
+y0 = [r0, dr0, theta0, dtheta0]     #valore iniziale di y
+t_span = (0, 3 * 365.25)            #tempo di osservazione 3 anni
+t_eval = np.linspace(*t_span, 1000) #Forziamo la valutazione in 1000 istanti esattamente spaziati nel tempo.
 
-# Estrazione soluzioni
+print("Integrazione in corso...")
+sol = solve_ivp(equazioni, t_span, y0, t_eval=t_eval, method="DOP853", rtol=1e-10, atol=1e-10) #atol e rtol 
+#sono i parametri che controllano la precisione con cui solve_ivp risolve le equazioni differenziali
+#cos'è il metodo di DOP853? 8 → Ordine di accuratezza: il metodo stima la soluzione con un errore proporzionale (Δt)^8
+#5→Ordine dell'error estimator: internamente il metodo calcola anche una soluzione di ordine 5 (meno precisa)   
+#3→Ordine dell'interpolazione densa: quando vogliamo la soluzione in istanti specifici (come con t_eval), 
+#il metodo non ricalcola tutto, ma usa un'interpolazione di ordine 3 
+
+#Calcoliamo coordinate
 r = sol.y[0]
 theta = sol.y[2]
 x = r * np.cos(theta)
 y = r * np.sin(theta)
 
-# Plot dell'orbita
-plt.figure(figsize=(6,6))
-plt.plot(x, y, label='Orbita del pianeta')
-plt.scatter([0], [0], color='orange', s=100, label='Stella')
+# ---------------------------
+# Visualizzazione
+# ---------------------------
+plt.figure(figsize=(7,7))
+plt.plot(x, y, 'b-', linewidth=1.5, label='Orbita del pianeta')
+plt.scatter([0], [0], color='orange', s=200, label='Stella', edgecolor='black')
 plt.xlabel('x [AU]')
 plt.ylabel('y [AU]')
-plt.title('Moto planetario via meccanica Lagrangiana')
+plt.title(f'Orbita planetaria con M_star={M_star:.2f} M☉, M_planet={M_planet:.2e} M☉')
 plt.axis('equal')
-plt.grid(True)
+plt.grid(True, alpha=0.3)
 plt.legend()
+plt.tight_layout()
 plt.show()
-
 
 #riflessioni: scipy.integrate è un sistema python che implementa IVP (initial value problem), di base permette di risolvere equazioni differenziali ordinarie.
 Oltre a solve_ivp, il modulo offre:
